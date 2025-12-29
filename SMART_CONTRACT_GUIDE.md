@@ -79,7 +79,7 @@ If you don't have Node.js v18+, install it:
 
 1. **Clone or open the project**:
    ```bash
-   cd CroiletFluush
+   cd Freequidity
    ```
 
 2. **Install dependencies**:

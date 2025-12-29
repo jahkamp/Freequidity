@@ -1,7 +1,7 @@
 {
   "_format": "hh-sol-artifact-1",
-  "contractName": "CroiletFluush",
-  "sourceName": "contracts/CroiletFluush.sol",
+  "contractName": "Freequidity",
+  "sourceName": "contracts/Freequidity.sol",
   "abi": [
     {
       "inputs": [

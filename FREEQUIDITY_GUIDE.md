@@ -36,7 +36,7 @@
 ### 1. Clone & Install
 
 ```bash
-cd CroiletFluush
+cd Freequidity
 npm install
 ```
 
