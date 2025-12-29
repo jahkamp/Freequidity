@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  @apply bg-white dark:bg-gray-950;
+
+  @media (prefers-color-scheme: dark) {
+    color-scheme: dark;
+  }
+}
+
+:root {
+  --croilet-bg: #071421;      /* overall background */
+  --croilet-panel: #12305B;   /* cookie popup / primary panel */
+  --croilet-darkpanel: #0E283D; /* darker card bg */
+  --croilet-green: #0b3b5a;   /* dark blue (was green) */
+  --croilet-accent: #39FF14;  /* neon green (was purple) */
+  --croilet-text: #E6F2F1;
+  --croilet-accept-btn-bg: #000000; /* cookie accept -> black */
+  --croilet-accept-btn-text: #ffffff;
+}
+
+@layer base {
+  h1, h2, h3 { font-weight: 800 }
+  .neon-heading {
+    text-shadow: 0 2px 8px rgba(124,58,237,0.25), 0 6px 24px rgba(24,165,88,0.06);
+  }
+}
