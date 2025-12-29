@@ -21,7 +21,7 @@ This document describes all smart contracts in the repo.
 - Owner-controlled
 
 **Constructor Arguments**:
-- `_tp` (address): TP token address (`0x421465f546763c5114Dff5beC0ff953b3d51D0B2`)
+- `_tp` (address): TP token address (`0xacf7fF592997a4Ca3e1d109036eAAe2603c1D948`) (TTP on Cronos testnet)
 - `_router` (address): Ebisusbay router (`0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7`)
 
 **Main Functions**:

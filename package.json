@@ -15,6 +15,9 @@
     "contracts:test:cjs": "tsc -p tsconfig.hardhat.json --outDir tmp-test-build && node scripts/run-compiled-tests.cjs && mocha --no-config \"tmp-test-build/test/**/*.test.cjs\" --timeout 40000 --reporter spec && node -e \"require('fs').rmSync('tmp-test-build',{recursive:true,force:true})\"",
     "contracts:node": "hardhat node",
     "contracts:deploy:localhost": "hardhat run --network localhost scripts/deploy.ts",
+    "contracts:deploy:cronos": "hardhat run --network cronos scripts/deploy.ts",
+    "contracts:deploy:cronos:cjs": "tsc -p tsconfig.hardhat.json --outDir tmp-build && node tmp-build/scripts/deploy.js && node -e \"require('fs').rmSync('tmp-build',{recursive:true,force:true})\"",
+    "contracts:deploy:cronos:cjs2": "tsc -p tsconfig.hardhat.json --outDir tmp-build --module CommonJS && node tmp-build/scripts/deploy.js && node -e \"require('fs').rmSync('tmp-build',{recursive:true,force:true})\"",
     "run-mint": "node scripts/run-mint.js"
   },
   "dependencies": {

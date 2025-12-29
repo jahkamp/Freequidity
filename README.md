@@ -14,7 +14,7 @@ This project includes **Freequidity** — a production-ready Cronos mainnet cont
 - Enforces reserve requirements (~2x TP by default, configurable by owner)
 
 **Key Addresses (Cronos Mainnet)**:
-- TP Token: `0x421465f546763c5114Dff5beC0ff953b3d51D0B2`
+- TP Token: `0xacf7fF592997a4Ca3e1d109036eAAe2603c1D948` (TTP testnet)
 - Ebisusbay Router: `0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7`
 
 👉 See [Freequidity Quick Guide](./FREEQUIDITY_GUIDE.md) for deployment and usage.

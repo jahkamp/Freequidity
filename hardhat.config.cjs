@@ -35,6 +35,12 @@ module.exports = {
       url: ALCHEMY ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY}` : '',
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
     },
+    // Cronos testnet (Chapel)
+    cronos: {
+      url: process.env.CRONOS_TESTNET_URL || 'https://evm-t3.cronos.org',
+      chainId: 338,
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+    },
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY || '',

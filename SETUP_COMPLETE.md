@@ -81,15 +81,25 @@ Follow the detailed instructions in `SMART_CONTRACT_GUIDE.md`:
 4. Update contract address in the frontend component
 5. Deploy frontend to a hosting service (Vercel, Netlify, etc.)
 
-### **For Cronos Mainnet Deployment** (Freequidity)
+### **For Cronos Testnet/Mainnet Deployment** (Freequidity)
 
-Follow `FREEQUIDITY_GUIDE.md` for comprehensive instructions:
-1. Set up Cronos network in Hardhat config
-2. Fund deployer wallet with CRO
-3. Run: `npx hardhat run --network cronos scripts/deploy.ts`
-4. Fund deployed contract with TP tokens (~2x the expected swap amounts)
-5. Verify contract on Cronoscan
-6. Integrate with frontend
+Follow `FREEQUIDITY_GUIDE.md` for comprehensive instructions, or use these quick steps:
+
+1. Add values to `.env` (copy `.env.example`):
+   - `CRONOS_TESTNET_URL` (e.g. `https://evm-t3.cronos.org`)
+   - `PRIVATE_KEY` (deployer wallet, keep secret)
+   - Optionally `TP_TOKEN` and `ROUTER` if you use non-default pair addresses
+2. Run the Cronos deployment (testnet):
+   ```powershell
+   npm run contracts:deploy:cronos
+   # or
+   npx hardhat run --network cronos scripts/deploy.ts
+   ```
+3. After success, `deployed-address.json` will contain the `Freequidity` address and `network` field
+4. Update the frontend env (or `VITE_FREEQUIDITY_ADDRESS`) with the deployed address and restart `npm run dev`
+5. Fund deployed contract with TP tokens (~2x the expected swap amounts) and verify on Cronoscan
+
+> Note: Use `CRONOS_TESTNET_URL` for Chapel testnet (chain id 338). For mainnet use your Cronos mainnet RPC URL and ensure `chainId` in front-end env is set accordingly.
 
 ---
 

@@ -3,10 +3,12 @@ const hre = require("hardhat");
 async function main() {
   console.log("Deploying Freequidity...");
   
-  // TODO: Update these addresses for your network
-  const TP_TOKEN = "0x421465f546763c5114Dff5beC0ff953b3d51D0B2"; // Cronos mainnet TP
-  const ROUTER = "0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7"; // Cronos mainnet Ebisusbay router
-  
+  // Token and router can be overridden with environment variables for different networks
+  // Default TP token set to TTP (Cronos testnet) for convenient testing
+  const TP_TOKEN = process.env.TP_TOKEN || "0xacf7fF592997a4Ca3e1d109036eAAe2603c1D948"; // default (Cronos testnet TTP)
+  const ROUTER = process.env.ROUTER || "0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7"; // default (Cronos router)
+  console.log(`Using TP_TOKEN=${TP_TOKEN} ROUTER=${ROUTER} on network ${hre.network.name}`);
+
   const Freequidity = await hre.ethers.getContractFactory("Freequidity");
   const contract = await Freequidity.deploy(TP_TOKEN, ROUTER);
   await contract.deployed();
@@ -18,6 +20,8 @@ async function main() {
   const addressPath = "./deployed-address.json";
   fs.writeFileSync(addressPath, JSON.stringify({
     Freequidity: contract.address,
+    TP_TOKEN,
+    ROUTER,
     network: hre.network.name,
     deployer: (await hre.ethers.getSigners())[0].address,
   }, null, 2));

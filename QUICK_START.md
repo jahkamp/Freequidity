@@ -92,7 +92,7 @@ npm run hh clean
 This repo includes `contracts/Freequidity.sol` — a contract that accepts native CRO from users, pays them TP from a funded wallet balance (on-chain price via a UniswapV2-style router), then uses the received CRO to add WCRO/TP liquidity and burns the LP tokens.
 
 Key addresses (example for Cronos mainnet):
-- TP token: `0x421465f546763c5114Dff5beC0ff953b3d51D0B2` (the token this contract pays out)
+- TP token: `0xacf7fF592997a4Ca3e1d109036eAAe2603c1D948` (TTP on Cronos testnet — the token this contract pays out)
 - Ebisusbay router: `0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7` (UniswapV2-style router)
 - Dead address (burn): `0x000000000000000000000000000000000000dEaD`
 

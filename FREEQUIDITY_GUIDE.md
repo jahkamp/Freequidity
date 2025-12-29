@@ -77,7 +77,7 @@ Create or use `scripts/deploy.ts` (example below):
 import { ethers } from "hardhat";
 
 async function main() {
-  const TP_ADDRESS = "0x421465f546763c5114Dff5beC0ff953b3d51D0B2"; // TP token
+  const TP_ADDRESS = "0xacf7fF592997a4Ca3e1d109036eAAe2603c1D948"; // TP token (TTP on Cronos testnet) 
   const ROUTER_ADDRESS = "0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7"; // Ebisusbay router
 
   console.log("Deploying Freequidity...");
@@ -104,7 +104,7 @@ Example output:
 ```
 Deploying Freequidity...
 ✅ Freequidity deployed to: 0x1234567890abcdef...
-   TP Token: 0x421465f546763c5114Dff5beC0ff953b3d51D0B2
+   TP Token: 0xacf7fF592997a4Ca3e1d109036eAAe2603c1D948 (TTP testnet)
    Router: 0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7
 ```
 
@@ -134,7 +134,7 @@ npx hardhat verify --network cronos <DEPLOYED_ADDRESS> <TP_ADDRESS> <ROUTER_ADDR
 
 Example:
 ```bash
-npx hardhat verify --network cronos 0x1234567890abcdef 0x421465f546763c5114Dff5beC0ff953b3d51D0B2 0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7
+npx hardhat verify --network cronos 0x1234567890abcdef 0xacf7fF592997a4Ca3e1d109036eAAe2603c1D948 0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7
 ```
 
 ---
@@ -334,7 +334,7 @@ npm run contracts:test
 
 | Name | Address |
 |------|---------|
-| TP Token | `0x421465f546763c5114Dff5beC0ff953b3d51D0B2` |
+| TP Token | `0xacf7fF592997a4Ca3e1d109036eAAe2603c1D948` |
 | Ebisusbay Router | `0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7` |
 | WCRO (Wrapped CRO) | From router's `WETH()` call |
 | Dead Address (burn) | `0x000000000000000000000000000000000000dEaD` |

@@ -1,8 +1,8 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "C:\\Users\\jahka\\Freequidity\\Freequidity\\contracts\\Freequidity.sol": {
-      "lastModificationDate": 1766976677700,
+    "C:\\Users\\jahka\\Freequidity\\contracts\\Freequidity.sol": {
+      "lastModificationDate": 1766979065030,
       "contentHash": "7831808ee304f34a73c8ea639f8a7426",
       "sourceName": "contracts/Freequidity.sol",
       "solcConfig": {
@@ -39,7 +39,7 @@
         "IUniswapV2Router02"
       ]
     },
-    "C:\\Users\\jahka\\Freequidity\\Freequidity\\contracts\\mocks\\MockERC20.sol": {
+    "C:\\Users\\jahka\\Freequidity\\contracts\\mocks\\MockERC20.sol": {
       "lastModificationDate": 1762927209124,
       "contentHash": "0cb0ec3a10f8ddbd2e72f9ef8cd46f92",
       "sourceName": "contracts/mocks/MockERC20.sol",
@@ -74,7 +74,7 @@
         "MockERC20"
       ]
     },
-    "C:\\Users\\jahka\\Freequidity\\Freequidity\\contracts\\mocks\\MockRouter.sol": {
+    "C:\\Users\\jahka\\Freequidity\\contracts\\mocks\\MockRouter.sol": {
       "lastModificationDate": 1762927209197,
       "contentHash": "fb0dde7bb108404e4ed84d5ddbcf11f3",
       "sourceName": "contracts/mocks/MockRouter.sol",
@@ -112,7 +112,7 @@
         "MockRouter"
       ]
     },
-    "C:\\Users\\jahka\\Freequidity\\Freequidity\\contracts\\mocks\\MockFactory.sol": {
+    "C:\\Users\\jahka\\Freequidity\\contracts\\mocks\\MockFactory.sol": {
       "lastModificationDate": 1762927209167,
       "contentHash": "1fe08c518e25435db0a56e973423b0f7",
       "sourceName": "contracts/mocks/MockFactory.sol",
@@ -147,7 +147,7 @@
         "MockFactory"
       ]
     },
-    "C:\\Users\\jahka\\Freequidity\\Freequidity\\contracts\\mocks\\MockPair.sol": {
+    "C:\\Users\\jahka\\Freequidity\\contracts\\mocks\\MockPair.sol": {
       "lastModificationDate": 1762927209227,
       "contentHash": "953d1a86907e7a31d25914b5bbd26ac0",
       "sourceName": "contracts/mocks/MockPair.sol",

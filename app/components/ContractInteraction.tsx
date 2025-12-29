@@ -6,7 +6,7 @@ const DEFAULT_CONTRACT = '0xfdfcdec2fa7164adc587ffd3e7603afca6f982fe';
 const CONTRACT = (import.meta.env as any).VITE_FREEQUIDITY_ADDRESS || DEFAULT_CONTRACT;
 const CONTRACT_FROM_ENV = !!(import.meta.env as any).VITE_FREEQUIDITY_ADDRESS;
 
-const TP_TOKEN = '0x421465f546763c5114Dff5beC0ff953b3d51D0B2';
+const TP_TOKEN = (import.meta.env as any).VITE_TP_TOKEN || '0xacf7fF592997a4Ca3e1d109036eAAe2603c1D948';
 // Chain id can be overridden by Vite env (VITE_CHAIN_ID) — default to Cronos testnet (Chapel) chain id 338
 const CHAIN = Number((import.meta.env as any).VITE_CHAIN_ID) || 338;
 const CHAIN_NAME = (import.meta.env as any).VITE_CHAIN_NAME || (CHAIN === 25 ? 'Cronos Mainnet' : CHAIN === 338 ? 'Cronos Testnet (Chapel)' : 'Cronos ' + CHAIN);
@@ -147,6 +147,16 @@ export default function ContractInteraction() {
       } catch (err2: any) {
         console.error('Public RPC fallback also failed for getPrice:', err2);
         // Friendly user guidance when both reads fail (often means no liquidity/pair or contract reverted)
+        // Allow an environment override when on testnets without on-chain TP/CRO liquidity
+        const OVERRIDE_CRO_PER_TP = (import.meta.env as any).VITE_OVERRIDE_CRO_PER_TP;
+        if (OVERRIDE_CRO_PER_TP) {
+          // OVERRIDE is interpreted as CRO per 1 TP (e.g. 5 means 5 CRO per 1 TP)
+          setPriceTPperCRO(String(OVERRIDE_CRO_PER_TP));
+          setError(null);
+          setNoLiquidity(false);
+          return;
+        }
+
         setError('Price unavailable: contract read reverted or no liquidity/pair found (public RPC fallback also failed).');
         setNoLiquidity(true);
         setPriceTPperCRO(null);
@@ -479,6 +489,20 @@ export default function ContractInteraction() {
             {contractDeployed === false && (
               <p className='mt-2 text-xs text-red-400'>Contract address has no deployed code on Cronos — update the `VITE_FREEQUIDITY_ADDRESS` env or deploy Freequidity to Cronos.</p>
             )}
+            <div className='mt-4'>
+              <button
+                onClick={() => runDiagnostics()}
+                disabled={diagnosing}
+                className='rounded-md bg-white px-3 py-1 text-sm font-medium text-black hover:brightness-95 disabled:opacity-60'
+              >
+                {diagnosing ? 'Diagnosing...' : 'Run diagnostics'}
+              </button>
+              {diagOutput && (
+                <div className='mt-2 max-h-48 overflow-auto rounded bg-[#00102E] p-3 text-xs text-gray-200'>
+                  <pre className='whitespace-pre-wrap'>{diagOutput}</pre>
+                </div>
+              )}
+            </div>
           </div>
           <div className='flex flex-col gap-4'>
             <input type='number' value={cro} onChange={(e) => { setCro(e.target.value); setTp(null); }} placeholder={`0.0 (${NATIVE_SYMBOL})`} className='w-full rounded-lg border border-gray-600 bg-gray-800 text-white px-4 py-2 text-sm' />
