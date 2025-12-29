@@ -11,7 +11,8 @@
     "typecheck": "tsc",
     "hh": "hardhat",
     "contracts:compile": "hardhat compile",
-    "contracts:test": "hardhat test",
+    "contracts:test": "cross-env \"NODE_OPTIONS=--loader ts-node/esm\" hardhat test",
+    "contracts:test:cjs": "tsc -p tsconfig.hardhat.json --outDir tmp-test-build && node scripts/run-compiled-tests.cjs && mocha --no-config \"tmp-test-build/test/**/*.test.cjs\" --timeout 40000 --reporter spec",
     "contracts:node": "hardhat node",
     "contracts:deploy:localhost": "hardhat run --network localhost scripts/deploy.ts",
     "run-mint": "node scripts/run-mint.js"
@@ -47,6 +48,7 @@
     "@typescript-eslint/parser": "^6.7.4",
     "autoprefixer": "^10.4.19",
     "chai": "^4.3.8",
+    "cross-env": "^10.1.0",
     "dotenv": "^16.3.1",
     "eslint": "^8.38.0",
     "eslint-import-resolver-typescript": "^3.6.1",

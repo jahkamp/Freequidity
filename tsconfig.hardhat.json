@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "ESNext",
     "target": "ES2020",
     "lib": ["ES2020"],
     "resolveJsonModule": true,
@@ -12,6 +12,9 @@
     "moduleResolution": "node",
     "noEmit": false,
     "types": ["mocha", "node"]
+  },
+  "ts-node": {
+    "esm": true
   },
   "include": [
     "hardhat.config.cjs",
