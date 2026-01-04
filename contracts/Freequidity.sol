@@ -1,23 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.31;
 
-/// @notice Minimal IERC20 interface
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function allowance(address owner, address spender) external view returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-}
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/// @notice Minimal UniswapV2 Router interface (addLiquidityETH + price query)
-interface IUniswapV2Router02 {
-    function WETH() external pure returns (address);
-    function factory() external pure returns (address);
-    function getAmountsOut(uint256 amountIn, address[] calldata path) external view returns (uint256[] memory amounts);
+interface IEbisusBayRouter {
     function addLiquidityETH(
         address token,
         uint amountTokenDesired,
@@ -26,155 +14,187 @@ interface IUniswapV2Router02 {
         address to,
         uint deadline
     ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
+
+    function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
 }
 
-/// @notice Minimal UniswapV2 Factory interface (to find pair address)
-interface IUniswapV2Factory {
-    function getPair(address tokenA, address tokenB) external view returns (address pair);
-}
+contract Freequidity is Ownable {
+    using SafeERC20 for IERC20;
 
-/// @title Freequidity
-/// @notice Accepts CRO from users, transfers TP from contract's TP balance to the user at current on-chain price, uses the received CRO to add WCRO/TP liquidity on a UniswapV2-style router, and burns the LP tokens.
-contract Freequidity {
-    // ---- state ----
-    IERC20 public immutable TP;
-    IUniswapV2Router02 public immutable router;
-    address public immutable DEAD = 0x000000000000000000000000000000000000dEaD;
-
-    // minimal ownership
-    address public owner;
-
-    // reentrancy guard
-    uint256 private _status;
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-
-    // Reserve controls: require the contract hold roughly reserveMultiplier% of expected TP (100 = 1x, 200 = 2x)
-    // and an optional small buffer in basis points to account for rounding/slippage
-    uint256 public reserveMultiplierPct = 200; // default 200% => ~2x
-    uint256 public reserveBufferBips = 100; // default 1% extra
-
-    // events
-    event SwapPaidWithTP(address indexed buyer, uint256 croIn, uint256 tpOut);
-    event LiquidityAddedAndBurned(address indexed pair, uint256 amountToken, uint256 amountETH, uint256 liquidity);
-    event OwnerWithdrawn(address token, address to, uint256 amount);
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "NOT_OWNER");
-        _;
-    }
+    // Reentrancy guard state
+    bool private locked;
 
     modifier nonReentrant() {
-        require(_status != _ENTERED, "REENTRANT");
-        _status = _ENTERED;
+        require(!locked, "Reentrant call.");
+        locked = true;
         _;
-        _status = _NOT_ENTERED;
+        locked = false;
     }
 
-    constructor(address _tp, address _router) {
-        require(_tp != address(0) && _router != address(0), "ZERO_ADDRESS");
-        TP = IERC20(_tp);
-        router = IUniswapV2Router02(_router);
-        owner = msg.sender;
-        _status = _NOT_ENTERED;
+    address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+    address public constant WCRO = 0x5C7F8A570d578ED84E63fdFA7b1eE72dEae1AE23; // Wrapped CRO on Cronos
+
+    uint256 public minCroAmount = 1 ether; // Minimum amount of CRO to process
+    uint256 public maxCroAmount = 100 ether; // Maximum amount of CRO to process
+    uint256 public slippageTolerance = 300; // 3% slippage tolerance (in basis points)
+    uint256 private constant SLIPPAGE_BASE = 10000;
+    uint256 private constant DEADLINE_OFFSET = 600; // 10 minutes
+    uint256 private constant LIQUIDITY_MULTIPLIER = 2;
+    bool public paused = false;
+
+    // Store the TP token and router addresses as state variables
+    address public TP_TOKEN;
+    address public EBISUS_BAY_ROUTER;
+
+    event LiquidityBurned(address indexed user, uint256 croAmount, uint256 tpAmount, uint256 liquidityBurned);
+    event TreasuryWithdrawn(address indexed token, uint256 amount);
+
+    modifier notPaused() {
+        require(!paused, "Contract is paused.");
+        _;
     }
 
-    receive() external payable {}
-
-    /// @notice Query the current expected TP output for a given CRO (wei) amount using the router's reserves
-    /// @param croAmount amount of native CRO (in wei)
-    /// @return tpAmount expected TP amount returned by the router path [WETH, TP]
-    function quoteTPForCRO(uint256 croAmount) public view returns (uint256 tpAmount) {
-        require(croAmount > 0, "ZERO_CRO");
-        address[] memory path = new address[](2);
-        path[0] = router.WETH();
-        path[1] = address(TP);
-        uint256[] memory amounts = router.getAmountsOut(croAmount, path);
-        return amounts[amounts.length - 1];
+    // Constructor sets the TP token and router addresses
+    constructor(address _owner, address _tpToken, address _router) Ownable(_owner) {
+        require(_tpToken != address(0), "Invalid TP token.");
+        require(_router != address(0), "Invalid router.");
+        TP_TOKEN = _tpToken;
+        EBISUS_BAY_ROUTER = _router;
     }
 
-    /// @notice Main function: user sends CRO, receives TP (from this contract's TP balance) at on-chain price; the contract uses the CRO to add WCRO/TP liquidity on the router and burns the LP tokens.
-    /// @param slippageBips allowed slippage in basis points (parts per 10,000) used to set min amounts for adding liquidity (e.g., 100 = 1%)
-    /// @param deadline unix timestamp deadline for the router call
-    function swapCROForTPAndBurnLP(uint256 slippageBips, uint256 deadline) external payable nonReentrant returns (uint256, uint256) {
-        require(msg.value > 0, "NO_CRO_SENT");
-        require(slippageBips <= 1000, "SLIPPAGE_TOO_HIGH"); // max 10%
-
-        uint256 expectedTP = quoteTPForCRO(msg.value);
-        require(expectedTP > 0, "NO_PAIR_OR_ZERO_OUTPUT");
-
-    // compute required TP reserve: reserveMultiplierPct percent of expectedTP, plus buffer (bips)
-    // required = expectedTP * reserveMultiplierPct / 100  + expectedTP * reserveBufferBips / 10000
-    uint256 totalTPNeeded = (expectedTP * reserveMultiplierPct) / 100 + (expectedTP * reserveBufferBips) / 10000;
-    require(TP.balanceOf(address(this)) >= totalTPNeeded, "INSUFFICIENT_TP_IN_CONTRACT");
-
-        // transfer TP to user
-        require(TP.transfer(msg.sender, expectedTP), "TP_TRANSFER_TO_USER_FAILED");
-        emit SwapPaidWithTP(msg.sender, msg.value, expectedTP);
-
-        // approve router to pull TP for liquidity
-        require(TP.approve(address(router), expectedTP), "APPROVE_FAILED");
-
-        uint256 minToken = (expectedTP * (10000 - slippageBips)) / 10000;
-        uint256 minETH = (msg.value * (10000 - slippageBips)) / 10000;
-
-        // add liquidity and burn LP (separate internal call to reduce stack usage)
-        (uint256 liquidity, uint256 lpBurned) = _addLiquidityAndBurn(expectedTP, msg.value, minToken, minETH, deadline);
-        return (expectedTP, lpBurned);
+    receive() external payable {
+        burnLiquidityPayReward();
     }
 
-    // internal helper to add liquidity and burn LP tokens; split out to reduce stack depth in main flow
-    function _addLiquidityAndBurn(uint256 tokenAmount, uint256 ethAmount, uint256 minToken, uint256 minETH, uint256 deadline) internal returns (uint256 liquidity, uint256 lpBurned) {
-        ( , , liquidity) = router.addLiquidityETH{value: ethAmount}(
-            address(TP),
-            tokenAmount,
-            minToken,
-            minETH,
-            address(this),
-            deadline
+    function burnLiquidityPayReward() public payable notPaused nonReentrant {
+        uint256 croAmount = msg.value;
+        require(croAmount >= minCroAmount, "CRO amount too small.");
+        require(croAmount <= maxCroAmount, "CRO amount too large.");
+
+        // Calculate how much TP is needed based on the CRO amount
+        uint256 tpAmount = calculateTPAmount(croAmount);
+        uint256 reqAmount = tpAmount * LIQUIDITY_MULTIPLIER; // Half burned, half to user
+        uint256 contractTPBalance = IERC20(TP_TOKEN).balanceOf(address(this));
+
+        // Check if we have enough TP in the contract.
+        require(
+            contractTPBalance >= reqAmount,
+            string.concat(
+                "Insufficient TP remaining. ",
+                "Required: ", uint2str(reqAmount),
+                ", Available: ", uint2str(contractTPBalance)
+            )
         );
 
-        address pair = IUniswapV2Factory(router.factory()).getPair(router.WETH(), address(TP));
-        if (pair != address(0)) {
-            IERC20 lp = IERC20(pair);
-            uint256 lpBal = lp.balanceOf(address(this));
-            if (lpBal > 0) {
-                require(lp.transfer(DEAD, lpBal), "LP_BURN_FAILED");
-                lpBurned = lpBal;
-            }
-            emit LiquidityAddedAndBurned(pair, tokenAmount, ethAmount, liquidity);
-        } else {
-            emit LiquidityAddedAndBurned(address(0), tokenAmount, ethAmount, liquidity);
+        // Approve router to use TP tokens
+        // Reset approval to 0 first, then set new approval
+        IERC20(TP_TOKEN).safeIncreaseAllowance(EBISUS_BAY_ROUTER, 0);
+        IERC20(TP_TOKEN).safeIncreaseAllowance(EBISUS_BAY_ROUTER, tpAmount);
+
+        // Calculate minimum amounts based on slippage tolerance
+        uint256 minTPAmount = tpAmount * (SLIPPAGE_BASE - slippageTolerance)/(SLIPPAGE_BASE);
+        uint256 minCROAmount = croAmount * (SLIPPAGE_BASE - slippageTolerance)/(SLIPPAGE_BASE);
+
+        // Add liquidity and burn LP tokens by sending them to dead address
+        (uint256 usedTPAmount, uint256 usedCROAmount, uint256 liquidity) = IEbisusBayRouter(EBISUS_BAY_ROUTER).addLiquidityETH{
+            value: croAmount
+        }(
+            TP_TOKEN,
+            tpAmount,
+            minTPAmount,
+            minCROAmount,
+            DEAD_ADDRESS,
+            block.timestamp + DEADLINE_OFFSET
+        );
+
+        // Send equivalent TP to the user
+        IERC20(TP_TOKEN).safeTransfer(msg.sender, usedTPAmount);
+        emit LiquidityBurned(msg.sender, usedCROAmount, usedTPAmount, liquidity);
+    }
+
+    // Helper function to convert uint to string
+    function uint2str(uint256 number) internal pure returns (string memory) {
+        if (number == 0) {
+            return "0";
         }
+
+        uint256 temp = number;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+
+        bytes memory buffer = new bytes(digits);
+        temp = number;
+        for (uint256 i = digits; i > 0; i--) {
+            buffer[i-1] = bytes1(uint8(48 + temp % 10));
+            temp /= 10;
+        }
+
+        return string(buffer);
     }
 
-    /// @notice Owner can adjust reserve multiplier (percentage). 100 = 1x, 200 = 2x.
-    function setReserveMultiplierPct(uint256 pct) external onlyOwner {
-        require(pct >= 100 && pct <= 1000, "pct-out-of-range");
-        reserveMultiplierPct = pct;
+    function calculateTPAmount(uint256 croAmount) internal view returns (uint256) {
+        // Get the current exchange rate from the router
+        address[] memory path = new address[](2);
+        path[0] = WCRO; // WCRO on Cronos
+        path[1] = TP_TOKEN;
+
+        uint256[] memory amounts = IEbisusBayRouter(EBISUS_BAY_ROUTER).getAmountsOut(croAmount, path);
+        return amounts[1];
     }
 
-    /// @notice Owner can adjust buffer in basis points (parts per 10,000). Default 100 = 1%.
-    function setReserveBufferBips(uint256 bips) external onlyOwner {
-        require(bips <= 1000, "buffer-too-large"); // max 10%
-        reserveBufferBips = bips;
+    // Admin functions
+    /**
+    * @notice Sets the minimum and maximum CRO amounts for transactions
+    * @dev Only callable by the contract owner. Ensures minAmount < maxAmount.
+    * @param _minAmount The minimum CRO amount required per transaction
+    * @param _maxAmount The maximum CRO amount allowed per transaction
+    */
+    function setMinMaxCroAmount(uint256 _minAmount, uint256 _maxAmount) external onlyOwner {
+        require(_minAmount < _maxAmount, "Min must be less than max");
+        minCroAmount = _minAmount;
+        maxCroAmount = _maxAmount;
     }
 
-    /// @notice Owner rescue: withdraw tokens (including TP or accidentally sent tokens) or native CRO from contract
-    function ownerWithdrawToken(address token, address to, uint256 amount) external onlyOwner {
-        require(to != address(0), "ZERO_TO");
+    /**
+     * @notice Sets the slippage tolerance for liquidity operations
+     * @dev Only callable by the contract owner. Slippage is specified in basis points (1% = 100).
+     *      Maximum allowed slippage is 10% (1000 basis points).
+     * @param _slippageTolerance The slippage tolerance in basis points
+     */
+    function setSlippageTolerance(uint256 _slippageTolerance) external onlyOwner {
+        require(_slippageTolerance <= 1000, "Slippage tolerance too high"); // Max 10%
+        slippageTolerance = _slippageTolerance;
+    }
+
+    /**
+     * @notice Pauses or unpauses the contract
+     * @dev Only callable by the contract owner. When paused, most user-facing functions will revert.
+     * @param _paused Boolean value to set the pause state (true = paused, false = unpaused)
+     */
+    function setPaused(bool _paused) external onlyOwner {
+        paused = _paused;
+    }
+
+    /**
+     * @notice Withdraws tokens or ETH from the contract treasury
+     * @dev Only callable by the contract owner. Emits TreasuryWithdrawn event.
+     * @param token The address of the token to withdraw (address(0) for ETH)
+     * @param amount The amount of tokens or ETH to withdraw
+     */
+    function withdrawTreasury(address token, uint256 amount) external onlyOwner nonReentrant {
+        require(amount > 0, "Cannot withdraw zero");
+
         if (token == address(0)) {
-            // native CRO
-            payable(to).transfer(amount);
+            // For ETH withdrawal, use call with explicit gas stipend check
+            (bool success, ) = owner().call{value: amount}("");
+            require(success, "Transfer failed");
         } else {
-            IERC20(token).transfer(to, amount);
+            // For ERC20 tokens, continue using safeTransfer
+            IERC20(token).safeTransfer(owner(), amount);
         }
-        emit OwnerWithdrawn(token, to, amount);
-    }
-
-    /// @notice Change owner
-    function transferOwnership(address newOwner) external onlyOwner {
-        require(newOwner != address(0), "ZERO_ADDRESS");
-        owner = newOwner;
+        emit TreasuryWithdrawn(token, amount);
     }
 }
