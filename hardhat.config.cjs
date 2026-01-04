@@ -41,6 +41,13 @@ module.exports = {
       chainId: 338,
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
     },
+
+    // Cronos mainnet (production)
+    cronosMainnet: {
+      url: process.env.CRONOS_MAINNET_URL || '',
+      chainId: 25,
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+    },
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY || '',

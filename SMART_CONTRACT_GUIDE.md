@@ -198,6 +198,32 @@ Visit `http://localhost:5173` and navigate to `/contract` to interact with your 
 
 ⚠️ **Only deploy to mainnet after thorough testing and security review!**
 
+**Mainnet safety & required steps** 🔒
+
+- Ensure you have the following in your `.env` (never commit it):
+  ```env
+  PRIVATE_KEY=0x...                 # Your deployer wallet private key
+  CRONOS_MAINNET_URL=https://...    # Your Cronos mainnet RPC URL
+  ROUTER=0x...                      # ROUTER address to use on mainnet (set explicitly)
+  TP_TOKEN=0x...                    # TP token address to use on mainnet (set explicitly)
+  CONFIRM_MAINNET=true              # Must be explicitly set to allow mainnet deploys
+  ```
+
+- The deploy script performs safety checks and will refuse to proceed unless `CONFIRM_MAINNET=true` (or `FORCE_MAINNET=true`) is present in your environment. This prevents accidental mainnet deployment.
+
+- The script also verifies that the `ROUTER` address has contract code and exposes the expected `WETH()` interface; if the router looks wrong the deployment will stop with an explanatory error.
+
+- Recommended dry-run steps:
+  1. Test on a fork of mainnet or a staging wallet with the same RPC and a small balance.
+  2. Run: `CONFIRM_MAINNET=true npx hardhat run --network cronosMainnet scripts/deploy.ts` or use the helper npm script:
+     ```bash
+     npm run contracts:deploy:cronos:mainnet
+     ```
+  3. Verify the `./deployed-address.json` file shows `network: "cronos"` and correct addresses.
+
+- If you want to be extra safe, set `CONFIRM_MAINNET` only in your CI job and require a manual approval step before running the CI deploy.
+
+
 ```bash
 npx hardhat run --network mainnet scripts/deploy.ts
 ```

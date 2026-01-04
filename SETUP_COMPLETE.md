@@ -95,6 +95,15 @@ Follow `FREEQUIDITY_GUIDE.md` for comprehensive instructions, or use these quick
    # or
    npx hardhat run --network cronos scripts/deploy.ts
    ```
+
+   **To deploy to Cronos mainnet (chain id 25)** — ensure you set `CRONOS_MAINNET_URL`, `PRIVATE_KEY`, `ROUTER` and `TP_TOKEN` in your `.env` and then run:
+   ```powershell
+   npm run contracts:deploy:cronos:mainnet
+   # or
+   cross-env CONFIRM_MAINNET=true npx hardhat run --network cronosMainnet scripts/deploy.ts
+   ```
+
+   **Warning:** The deploy script will refuse to run on chain id 25 unless `CONFIRM_MAINNET=true` is set; double-check addresses and use a dry-run/fork first.
 3. After success, `deployed-address.json` will contain the `Freequidity` address and `network` field
 4. Update the frontend env (or `VITE_FREEQUIDITY_ADDRESS`) with the deployed address and restart `npm run dev`
 5. Fund deployed contract with TP tokens (~2x the expected swap amounts) and verify on Cronoscan

@@ -1,0 +1,151 @@
+Parameter	Value	Notes
+_owner	Your wallet address (e.g., 0x123...)	Admin of the contract.
+_tpToken	0x421465f546763c5114Dff5beC0ff953b3d51D0B2	TP token address on Cronos.
+_router	0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7	Ebisu's Bay Router.
+
+address public constant TP_TOKEN = 0x421465f546763c5114Dff5beC0ff953b3d51D0B2;
+address public constant EBISUS_BAY_ROUTER = 0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7;
+
+# Install Node.js (v18+ recommended)
+winget install OpenJS.NodeJS
+
+# Install Yarn (optional but recommended)
+npm install -g yarn
+
+# Install Hardhat
+npm install -g hardhat
+
+mkdir freequidity-deploy && cd freequidity-deploy
+yarn init -y
+yarn add --dev hardhat @nomicfoundation/hardhat-toolbox dotenv @openzeppelin/contracts
+yarn hardhat
+# Select "Create a basic sample project"
+
+const hre = require("hardhat");
+
+async function main() {
+  // 1. Input Parameters (UPDATE THESE)
+  const ownerAddress = "0xYourOwnerAddress"; // Your wallet address
+  const tpTokenAddress = "0x421465f546763c5114Dff5beC0ff953b3d51D0B2"; // TP token on Cronos
+  const routerAddress = "0x4A1c18A37706AC24f8183C1F83b7F672B59CE6c7"; // Ebisu's Bay Router
+
+  // 2. Deploy Contract
+  const Freequidity = await hre.ethers.getContractFactory("Freequidity");
+  const freequidity = await Freequidity.deploy(
+    ownerAddress,
+    tpTokenAddress,
+    routerAddress
+  );
+  await freequidity.waitForDeployment();
+
+  // 3. Log Deployment Info
+  console.log("Freequidity deployed to:", await freequidity.getAddress());
+  console.log("Owner:", await freequidity.owner());
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+
+
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
+
+module.exports = {
+  solidity: "0.8.31",
+  networks: {
+    cronos: {
+      url: "https://evm.cronos.org", // Cronos Mainnet
+      accounts: [process.env.PRIVATE_KEY], // Your wallet private key
+      chainId: 25,
+    },
+    cronosTestnet: {
+      url: "https://evm-t3.cronos.org", // Cronos Testnet
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 338,
+    },
+  },
+};
+
+
+PRIVATE_KEY=your_private_key_here  # e.g., "0xabc123..."
+
+# Compile the contract
+yarn hardhat compile
+
+# Deploy to Cronos Testnet (dry run first)
+yarn hardhat run scripts/deploy.js --network cronosTestnet
+
+# Deploy to Cronos Mainnet
+yarn hardhat run scripts/deploy.js --network cronos
+
+
+
+
+Pre-Deployment Checklist:
+Fund Your Wallet:
+
+Ensure your wallet has CRO for gas fees (~0.05 CRO per transaction).
+Send TP tokens to the contract address before deployment (or immediately after). The contract needs TP tokens to reward users (see reqAmount in burnLiquidityPayReward).
+Contract Addresses:
+
+Verify TP_TOKEN and EBISUS_BAY_ROUTER addresses for the correct network (mainnet/testnet).
+Initial Parameters:
+
+minCroAmount: 1 CRO (default).
+maxCroAmount: 100 CRO (default).
+slippageTolerance: 3% (300 basis points, default).
+Test on Cronos Testnet First:
+
+Deploy to testnet and test with small amounts of Testnet CRO and Testnet TP.
+Testnet TP token: 0x7b9C5D9d7f57c5dE0E70d59Fb8349A62b5F4e9eE (confirm latest address).
+Security:
+
+Use a hardware wallet (e.g., Ledger) or MetaMask for deployment.
+Never expose your private key in plaintext (use .env).
+
+6. Post-Deployment Steps
+Fund the Contract with TP Tokens:
+Send TP tokens to the deployed contract address. The contract requires 2x the TP amount of user rewards (due to LIQUIDITY_MULTIPLIER = 2). Example: If a user burns 10 CRO worth of TP, the contract needs 20 CRO worth of TP in balance.
+Verify on Cronoscan:
+Check the deployed contract on Cronoscan (mainnet) or Cronos Testnet Explorer.
+Verify the owner, TP token balance, and router address.
+
+Set Up Frontend (Optional):
+Use the contract ABI and address to interact via Ethers.js or Web3.js.
+
+Example frontend call:
+javascript
+const contract = new ethers.Contract(contractAddress, abi, signer);
+await contract.burnLiquidityPayReward({ value: ethers.utils.parseEther("1.0") });
+7. Common Pitfalls
+Insufficient TP Tokens:
+
+The contract will revert with Insufficient TP remaining if it lacks TP tokens.
+Fix: Send TP tokens to the contract before users interact.
+Incorrect Router/Token Addresses:
+
+Using wrong addresses (e.g., testnet addresses on mainnet) will break the contract.
+Fix: Double-check addresses for the target network.
+Gas Limits:
+
+burnLiquidityPayReward interacts with a router and may require higher gas limits (~300,000 gas).
+Fix: Set a higher gas limit in your wallet (e.g., MetaMask).
+Paused Contract:
+
+If paused = true, all user functions revert.
+Fix: Call setPaused(false) as the owner.
+
+8. Admin Tasks Post-Deployment
+Task	Command/Action	Notes
+Update min/max CRO amounts	setMinMaxCroAmount(newMin, newMax)	Adjust based on market conditions.
+Update slippage tolerance	setSlippageTolerance(500)	Increase if transactions fail often.
+Pause the contract	setPaused(true)	Emergency stop.
+Withdraw trapped tokens	withdrawTreasury(tokenAddress, amount)	Recover accidental sends.
+
+9. Example Full Deployment Command
+powershell
+# Deploy to Cronos Mainnet
+$env:PRIVATE_KEY="your_private_key_here"
+yarn hardhat run scripts/deploy.js --network cronos
